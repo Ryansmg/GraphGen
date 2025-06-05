@@ -3,4 +3,4 @@ project(GraphGen)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(GraphGen main.cpp testlib.h)
+add_executable(GraphGen main.cpp graphGen.hpp testlib.h)
