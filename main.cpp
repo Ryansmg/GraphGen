@@ -1,4 +1,4 @@
-#include "graphGen.hpp"
+#include "graphGen.h"
 
 namespace settings {
     bool file_output = false;
