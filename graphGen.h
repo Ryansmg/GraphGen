@@ -1,4 +1,4 @@
-// Update: 2025-06-17
+// Update: 2025-09-21
 
 #ifndef GRAPHGEN_H_
 #define GRAPHGEN_H_
@@ -19,7 +19,6 @@ class Graph {
 protected:
     int v = 0;
     vector<pair<int, int>> edges;
-    map<pair<int, int>, int> edge_cnt;
     vector<int> group;
     vector<int> rank;
 
@@ -65,7 +64,7 @@ public:
      * @brief adds the edge a -> b. <br>
      * the added edge can be interpreted as an undirected edge later.
      *
-     * Time complexity: O(log E)
+     * Time complexity: approx. O(1)
      * @param a the starting vertex
      * @param b the ending vertex
      * @pre 1 <= a <= V
@@ -74,7 +73,6 @@ public:
     void add_edge(int a, int b) {
         chk(1 <= a && a <= v && 1 <= b && b <= v, "not a valid node");
         edges.emplace_back(a, b);
-        edge_cnt[make_pair(a, b)]++;
         merge_group(a, b);
     }
 
@@ -82,7 +80,8 @@ public:
      * @brief checks whether the edge a -> b exists. <br>
      * (does not check edge b -> a)
      *
-     * Time complexity: O(log E)
+     * Time complexity: O(E)
+     *
      * @return if the edge a -> b exists.
      * @param a the starting vertex
      * @param b the ending vertex
@@ -91,13 +90,16 @@ public:
      */
     [[nodiscard]] bool has_edge(int a, int b) const {
         chk(1 <= a && a <= v && 1 <= b && b <= v, "not a valid node");
-        return contains(edge_cnt, make_pair(a, b));
+        auto p = pair(a, b);
+        for(const auto& e : edges) if(e == p) return true;
+        return false;
     }
 
     /**
      * @brief checks whether the undirected edge a -- b exists.
      *
-     * Time complexity: O(log E)
+     * Time complexity: O(E)
+     *
      * @returns if add_edge(a, b) or add_edge(b, a) is called at least once.
      * @param a vertex number
      * @param b vertex number
@@ -211,8 +213,8 @@ public:
      */
     [[nodiscard]] vector<vector<int>> adjacency_list() const {
         vector<vector<int>> adj(v+1);
-        for(const auto& [u, v] : edges)
-            adj[u].push_back(v);
+        for(const auto& [u1, u2] : edges)
+            adj[u1].push_back(u2);
         return adj;
     }
 
@@ -225,8 +227,8 @@ public:
      */
     [[nodiscard]] vector<vector<int>> adjacency_list_undir() const {
         vector<vector<int>> adj(v+1);
-        for(const auto& [u, v] : edges)
-            adj[u].push_back(v), adj[v].push_back(u);
+        for(const auto& [u1, u2] : edges)
+            adj[u1].push_back(u2), adj[u2].push_back(u1);
         return adj;
     }
 
@@ -248,11 +250,16 @@ public:
      * @brief checks whether this directed graph has duplicate edges. <br>
      * edge a->b and edge b->a are treated as different edges.
      *
-     * Time complexity: O(E)
+     * Time complexity: O(E log E)
+     *
      * @return whether this graph has duplicate edges
      */
     [[nodiscard]] bool has_duplicate_edges() const {
-        for(const auto& [a, b] : edge_cnt) if(b > 1) return true;
+        set<pair<int, int>> s;
+        for(auto [a, b] : edges) {
+            if(contains(s, make_pair(a, b))) return true;
+            s.emplace(a, b);
+        }
         return false;
     }
 
@@ -276,7 +283,7 @@ public:
     /**
      * @brief returns the copy of this graph with shuffled node numbers
      *
-     * Time complexity: O(V + E log E)
+     * Time complexity: O(V + E)
      * @param arr arr[prev_node_number] = next_node_number
      * @return the shuffled graph
      */
@@ -287,8 +294,8 @@ public:
         for(int i = 1; i <= v; i++) chk(arr[i], "arr should be a bijective function.");
 
         Graph ret(v);
-        for(const auto& [u, v] : edges)
-            ret.add_edge(arr[u], arr[v]);
+        for(const auto& [u, u2] : edges)
+            ret.add_edge(arr[u], arr[u2]);
         return ret;
     }
 
@@ -296,7 +303,7 @@ public:
     /**
      * @brief returns the copy of this graph with shuffled node numbers
      *
-     * Time complexity: O(V + E log E)
+     * Time complexity: O(V + E)
      * @return the shuffled graph
      */
     [[nodiscard]] Graph nodes_shuffled() const {
@@ -310,7 +317,7 @@ public:
     /**
      * @brief shuffles the numbers of nodes
      *
-     * Time complexity: O(V + E log E)
+     * Time complexity: O(V + E)
      * @param arr arr[prev_node_number] = next_node_number
      * @return this graph
      */
@@ -322,7 +329,7 @@ public:
     /**
      * @brief shuffles the numbers of nodes
      *
-     * Time complexity: O(V + E log E)
+     * Time complexity: O(V + E)
      * @return this graph
      */
     Graph& shuffle_nodes() {
@@ -350,7 +357,7 @@ public:
     /**
      * @brief generates a tree
      *
-     * Time Complexity: O(n log n)
+     * Time Complexity: O(n)
      * @param n the node count
      * @param elongation the larger 'elongation' makes the generated tree longer. can be negative.
      * @return the generated tree
@@ -369,7 +376,7 @@ public:
     /**
      * @brief generates a tree by making (n-1) edges randomly without cycles
      *
-     * Time Complexity: O(n log n)
+     * Time Complexity: O(n)
      * @param n the node count
      * @return the generated tree
      */
@@ -632,16 +639,16 @@ public:
     // ...
     void ps_style_print(const bool zero_base = false) const {
         println(v, edges.size());
-        for(auto& [u, v] : edges) println(u - zero_base, v - zero_base);
+        for(auto& [u, u2] : edges) println(u - zero_base, u2 - zero_base);
     }
 
     void csacademy_style_print() const {
         for(int i = 1; i <= v; i++) println(i);
-        for(const auto& [u, v] : edges) println(u, v);
+        for(const auto& [u, u2] : edges) println(u, u2);
     }
 
     void print_edges() const {
-        for(const auto& [u, v] : edges) println(u, v);
+        for(const auto& [u, u2] : edges) println(u, u2);
     }
 };
 
